@@ -1,4 +1,5 @@
 
+
 class Element:
     
     def __init__(self,text, duplicate, offset, dim):
@@ -58,15 +59,18 @@ class Gui:
         self.image_size = (900,630)
         
         
-        self.current_list = []
+        self.current_list = [] #??
         
         self.base = np.zeros((760,1028,3), np.uint8)
+        
         self.message_pane_base = np.zeros((130,900,3), np.uint8)
         self.message_pane_base[:,:,1] = np.ones((130,900), np.uint8) * 64
         self.message_pane_base[:,:,2] = np.ones((130,900), np.uint8) * 140
+        
         self.menu_pane_base = np.zeros((760,128,3), np.uint8)
         self.menu_pane_base[:,:,1] = np.ones((760,128), np.uint8)
         self.menu_pane_base[:,:,2] = np.ones((760,128), np.uint8) * 128
+        
         self.image_pane_base = np.zeros((630,900,3), np.uint8)
         
         self.window = self.base.copy()
@@ -76,10 +80,7 @@ class Gui:
         self.temp_pane = self.image_pane.copy()
         
         
-        
-        
-        
-    
+    #Adding matter to panes  
     def add_message(self, msg1 = None, msg2 = None, retain = True):
         if(retain):
             if(msg1 is None):
@@ -113,10 +114,12 @@ class Gui:
         self.elements[0].set_state(1)
     
     def add_image_controls(self):
-        self.image_controls.append(Element('+', False, (10,650),(40,40)))
-        self.image_controls.append(Element('-', False, (80,650),(40,40)))
-        self.image_controls.append(Element('->', False, (80,720),(40,40)))
-        self.image_controls.append(Element('<-', False, (10,720),(40,40)))
+        self.image_controls.append(Element('+', False, (10,650),(20,20)))
+        self.image_controls.append(Element('-', False, (80,650),(20,20)))
+        self.image_controls.append(Element('->', False, (80,720),(20,20)))
+        self.image_controls.append(Element('<-', False, (10,720),(20,20)))
+        self.image_controls.append(Element('up', False, (45,690),(20,20)))
+        self.image_controls.append(Element('down', False, (45,690),(20,20)))
     
     def add_image(self, img):
         self.image = img
@@ -127,7 +130,61 @@ class Gui:
         sc_x = self.image_size[0]/width
         sc_y = self.image_size[1]/height
         self.scale = min(sc_x, sc_y)
+     
+    #setting properties of elements in each pane
+     def set_current_element(self, num):
+        print(self.num)
+        if(num <= self.num):
+            return(-1)
+        if(num > len(self.elements)):
+            return(-1)
+        for i in range(num):
+            self.elements[i].set_state(2)
+        
+        self.elements[num].set_state(1)
+        self.num = num
+        
+    def image_position(self, num):
+        if(num == 0): #zoom up
+            self.scale = self.scale * 1.1
+        elif (num == 1): #zoom down
+            if(self.image.shape[1] * self.scale < self.image_size[0]) and (self.image.shape[0] * self.scale < self.image_size[1]):
+                pass
+            else:
+                self.scale = self.scale / 1.1
+        elif (num == 2): #pan  right
+            inc = int(min(50, self.image.shape[1] * self.scale - self.x_pan - self.image_size[0]))
+            inc = max(0, inc)
+            self.x_pan += inc
+        elif (num == 3): #pan left
+            inc = min(50, self.x_pan)
+            self.x_pan -= inc
+        elif (num == 5): #pan  down
+            inc = int(min(50, self.image.shape[0] * self.scale - self.y_pan - self.image_size[1]))
+            inc = max(0, inc)
+            self.y_pan += inc
+        elif (num == 4): #pan up
+            inc = min(50, self.y_pan)
+            self.x_pan -= inc
     
+    def check_within(self, x, y):
+        #print(x,y)
+        for i, element in enumerate(self.elements):
+            if (element.has(x,y, self.menu_offset)):
+                return(i)
+            
+        return(-1)
+    
+    def check_image_controls(self, x, y):
+        #print(x,y)
+        for i, element in enumerate(self.image_controls):
+            if (element.has(x,y, self.menu_offset)):
+                return(i)
+            
+        return(-1)
+        
+    
+    #composing individual panes
     def compose_image(self):
         scale = self.scale
         x_pan = self.x_pan
@@ -167,50 +224,7 @@ class Gui:
         
         
     
-    def set_current_element(self, num):
-        print(self.num)
-        if(num <= self.num):
-            return(-1)
-        if(num > len(self.elements)):
-            return(-1)
-        for i in range(num):
-            self.elements[i].set_state(2)
-        
-        self.elements[num].set_state(1)
-        self.num = num
-        
-    def image_position(self, num):
-        if(num == 0):
-            self.scale = self.scale * 1.1
-        elif (num == 1):
-            if(self.image.shape[1] * self.scale < self.image_size[0]) and (self.image.shape[0] * self.scale < self.image_size[1]):
-                pass
-            else:
-                self.scale = self.scale / 1.1
-        elif (num == 2):
-            inc = int(min(50, self.image.shape[1] * self.scale - self.x_pan - self.image_size[0]))
-            inc = max(0, inc)
-            self.x_pan += inc
-        elif (num == 3):
-            inc = min(50, self.x_pan)
-            self.x_pan -= inc
     
-    def check_within(self, x, y):
-        #print(x,y)
-        for i, element in enumerate(self.elements):
-            if (element.has(x,y, self.menu_offset)):
-                return(i)
-            
-        return(-1)
-    
-    def check_image_controls(self, x, y):
-        #print(x,y)
-        for i, element in enumerate(self.image_controls):
-            if (element.has(x,y, self.menu_offset)):
-                return(i)
-            
-        return(-1)
-        
     
     def compose_message(self):
         
