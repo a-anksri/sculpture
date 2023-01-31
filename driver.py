@@ -14,10 +14,10 @@ def handler(event, x, y, flags, params):
         if num > -1:
             gui.set_current_element(num)
         
-        else:
-            num = gui.check_image_controls(x,y)
-            if (num == -1):
-                return(-1)
+    
+        num = gui.check_image_controls(x,y)
+        if (num > -1):
+                
             gui.image_position(num)
         
 gui = Gui()
