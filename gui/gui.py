@@ -2,13 +2,14 @@
 
 class Element:
     
-    def __init__(self,text, duplicate, offset, dim):
+    def __init__(self,text, duplicate, offset, dim, default = 0):
         self. x_offset = offset[0]
         self.y_offset = offset[1]
         self.color1 = [(0,255,0),(255,0,0),(0,255,255),(0,0,0)]
         self.color2 = [(0,0,0),(255,255,255),(0,0,0),(255,255,255)]
         self.dim = dim
         self.text = text
+        self.default = default
         self.state = 0
         
         
@@ -41,10 +42,17 @@ class Gui:
         self.msg2 = None
         self.elements = []
         self.image_controls = []
+        self.canvas = None
+        self.buttons = []
         
         self.scale = 1.0
         self.x_pan = 0
         self.y_pan = 0
+        self.imx1 = 0
+        self.imy1 = 0
+        self.imx2 = 0
+        self.imy2 = 0
+        self.dialog_on = False
         
         
         #nth child element is to be highlighted
@@ -57,6 +65,8 @@ class Gui:
         self.message_size = (900,130)
         self.menu_size = (128,760)
         self.image_size = (900,630)
+        self.button_offset = (0,0)
+        self.button_size = (600,300)
         
         
         self.current_list = [] #??
@@ -66,7 +76,7 @@ class Gui:
         self.message_pane_base = np.zeros((130,900,3), np.uint8)
         self.message_pane_base[:,:,1] = np.ones((130,900), np.uint8) * 64
         self.message_pane_base[:,:,2] = np.ones((130,900), np.uint8) * 140
-        
+        self.button_base = np.ones((300,600), np.uint8)
         self.menu_pane_base = np.zeros((760,128,3), np.uint8)
         self.menu_pane_base[:,:,1] = np.ones((760,128), np.uint8)
         self.menu_pane_base[:,:,2] = np.ones((760,128), np.uint8) * 128
@@ -77,7 +87,7 @@ class Gui:
         self.image_pane = self.image_pane_base.copy()
         self.menu_pane = self.menu_pane_base.copy()
         self.message_pane = self.message_pane_base.copy()
-        self.temp_pane = self.image_pane.copy()
+        self.dialog_pane = self.dialog_base.copy()
         
         
     #Adding matter to panes  
@@ -113,6 +123,9 @@ class Gui:
             self.elements.append(element)
         self.elements[0].set_state(1)
     
+    def add_dialog():
+        pass
+    
     def add_image_controls(self):
         self.image_controls.append(Element('+', False, (10,650),(20,20)))
         self.image_controls.append(Element('-', False, (80,650),(20,20)))
@@ -130,6 +143,7 @@ class Gui:
         sc_x = self.image_size[0]/width
         sc_y = self.image_size[1]/height
         self.scale = min(sc_x, sc_y)
+        self.canvas = self.image
      
     #setting properties of elements in each pane
      def set_current_element(self, num):
@@ -191,7 +205,7 @@ class Gui:
         y_pan = self.y_pan
         x_pos = 0
         y_pos = 0
-        cp = self.image.copy()
+        cp = self.canvas.copy()
         width = cp.shape[1]
         height = cp.shape[0]
         
