@@ -13,16 +13,16 @@ import sys
 
 #returns pandas database with annotations for the 
 if(__name__ == "__main__"):
-    if(len(sys.argv) <= 1):
-        file_name = "noc.png"
-    else:
+    
+    #FILE NAME HERE
+    if(len(sys.argv) > 1):
         file_name = sys.argv[1]
-
-   
+    else:
+        file_name = 'noc.png'
+    
     All_annotations = Final_Annotation()
     
-    #Change image name here
-    
+    #Chanee image name here
     img = cv.imread(file_name)
     
     
@@ -31,4 +31,4 @@ if(__name__ == "__main__"):
     for i in range(len(a['id'])):
         print(a["img_id"][i], a['person'][i], a['id'][i], a['pid'][i], a['type'][i])
     table = pd.DataFrame(a)
-
+    
