@@ -47,16 +47,21 @@ class Gui:
         #Content for display
         self.image = None
         self.canvas = None
+        self.scaled_canvas = None
         self.msg1 = None
         self.msg2 = None
         self.tmpmsg1 = None
         self.tmpmsg2 = None
+        
         
         #Child links to be displayed on the screen
         self.elements = []
         
         #Buttons for zoom/pan
         self.image_controls = []
+        self.cx = []
+        self.cy = []
+        self.cz = []
         
         #Buttons of confirmation dialog box
         self.buttons = []
@@ -75,10 +80,14 @@ class Gui:
         #x and y shifts (considered after scaling)
         self.x_pan = 0
         self.y_pan = 0
+        self.lazy = True
+        
         
         #Used for mouse drag based panning
         self.stablex_pan = 0
         self.stabley_pan = 0
+        self.current_selx = 0
+        self.current_sely = 0
         
         #Whether confirmation dialog box is to be displayed
         self.dialog_on = False
@@ -256,7 +265,17 @@ class Gui:
         y_pan = self.y_pan
         x_pos = 0
         y_pos = 0
+        self.flush_canvas()
         cp = self.canvas.copy()
+        if(not self.lazy):
+            for i, lis in enumerate(zip(self.cx, self.cy, self.cz)):
+                x,y,z = lis
+                if(i == 0):
+                    self.paint(x,y, z, typ = 0)
+                else:
+                    self.paint(x,y, z, typ = 2)
+            
+        
         width = cp.shape[1]
         height = cp.shape[0]
         
@@ -277,11 +296,21 @@ class Gui:
         
         
         
-        cp = cv.resize(cp, (sc_width, sc_height))
+        self.scaled_canvas = cv.resize(cp, (sc_width, sc_height))
+        if(self.lazy):
+            for i, lis in enumerate(zip(self.cx, self.cy, self.cz)):
+                x,y,z = lis
+                if(i == 0):
+                    self.paint(x,y, z, typ = 0)
+                else:
+                    self.paint(x,y, z, typ = 2)
         
+        self.draw_selection()
         im_width = int(min(sc_width, self.image_size[0]))
         im_height = int(min(sc_height, self.image_size[1]))
-        cp = cp[self.y_pan:self.y_pan + im_height, self.x_pan:self.x_pan + im_width,:]
+        cp = self.scaled_canvas[self.y_pan:self.y_pan + im_height, self.x_pan:self.x_pan + im_width,:]
+        
+            
         
         
         self.image_pane[y_pos:y_pos+im_height, x_pos: x_pos + im_width,:] = cp
@@ -319,22 +348,35 @@ class Gui:
         y = int(y/self.scale)
         return(x,y)
     
-    def draw_circle(self, x,y, typ = 0):
+    #To return landmark coordinates into image pane coords
+    def unscale_coords(self, x, y):
+        x = int(x * self.scale)
+        y = int(y* self.scale)
+        
+        return(x,y)
+    
+    def draw_selection(self):
+        if(self.dialog_on):
+            x, y = self.unscale_coords(self.current_selx, self.current_sely)
+            self.draw_circle(self.scaled_canvas, x, y, 4)
+        
+    
+    def draw_circle(self, pane, x,y, typ = 0):
         if(typ == 0):
-            cv.circle(self.canvas, (x,y), 18, (0,255,0), -1)
-            cv.circle(self.canvas, (x,y), 25, (0,255,0), 3)
-            cv.circle(self.canvas, (x,y), 35, (0,255,0), 1)
+            cv.circle(pane, (x,y), 3, (0,255,0), -1)
+            cv.circle(pane, (x,y), 6, (0,255,0), 2)
+            cv.circle(pane, (x,y), 8, (0,255,0), 1)
         elif(typ == 1):
-            cv.circle(self.canvas, (x,y), 18, (0,255,255), -1)
-            cv.circle(self.canvas, (x,y), 25, (0,255,0), 3)
+            cv.circle(pane, (x,y), 3, (0,255,255), -1)
+            cv.circle(pane, (x,y), 6, (0,255,0), 2)
             
-            cv.circle(self.canvas, (x,y), 35, (0,255,0), 1)
+            cv.circle(pane, (x,y), 8, (0,255,0), 1)
         elif(typ == 2):
-            cv.circle(self.canvas, (x,y), 18, (0,128,255), 5)
+            cv.circle(pane, (x,y), 3, (0,128,255), 2)
         elif(typ == 3):
-            cv.circle(self.canvas, (x,y), 18, (0,128,255), 5)
+            cv.circle(pane, (x,y), 3, (0,128,255), 2)
         elif(typ == 4):
-            cv.circle(self.canvas, (x,y), 18, (255,0,0), 3)
+            cv.circle(pane, (x,y), 3, (255,0,0), 2)
             
     def draw_line(self, x1, y1, x2, y2):
         cv.line(self.canvas, (x1,y1), (x2, y2), (255,255,255), 2)
@@ -359,7 +401,7 @@ class Gui:
     #Used to set position of image in the image pane whenever image control buttons used
     def image_position(self, num):
         if(num == 0):
-            self.scale = self.scale * 1.1
+            self.scale = min(2,self.scale * 1.1)
         elif (num == 1):
             if(self.image.shape[1] * self.scale < self.image_size[0]) and (self.image.shape[0] * self.scale < self.image_size[1]):
                 pass
@@ -403,11 +445,18 @@ class Gui:
     #To paint circles in place of landmarks
     def paint(self, parentx, parenty, hidden, typ = 0):
         
+        if(self.lazy):
+            pane = self.scaled_canvas
+            parentx, parenty = self.unscale_coords(parentx, parenty)
+        else:
+            pane = self.canvas
+                
+        
         t = typ
         if(hidden):
-            self.draw_circle(parentx, parenty, typ = t+1)
+            self.draw_circle(pane,parentx, parenty, typ = t+1)
         else:
-            self.draw_circle(parentx, parenty, typ = t)
+            self.draw_circle(pane, parentx, parenty, typ = t)
         
         
      #To check if dialog box buttons are clicked    
@@ -510,4 +559,3 @@ class Gui:
         self.image_pane = self.image_pane_base.copy()
         return self.window.copy()
         
-
