@@ -139,6 +139,121 @@ def handler(event, x, y, flags, params):
             
             
         
+def tool_GUI(img_name, All_annotations, img = None):
+  
+  gui = Gui()
+  person_id = 0
+  
+  
+  
+  gui.add_image(img)
+  gui.add_image_controls()
+  
+  
+  
+  
+  while(True):
+    
+    annot = Annotation_noGUI(landmarks, limbs, possible_duplicates, person_id = person_id, img_id = img_name)
+    annot.start_annotation()
+    cv.namedWindow("View")
+    cv.setMouseCallback("View", handler, (annot,gui) )
+    
+    gui.add_elements(annot.parent_link)
+    gui.set_current_element(0)
+    gui.add_message("Select a Forehead", "Starting New person")
+
+    annot.set_state('select')
+    gui.flush_canvas()
+    more = False
+    complete = False
+    to_save = True
+    alert = False
+
+    
+    
+    while(True):
+
+        
+        
+        num = annot.get_child()
+        
+        
+        gui.set_current_element(num)
+        if(annot.next_link.get_type() == 'Root'):
+            gui.add_message("Annotation Complete","Press 'a' to save and add person, Press 's' to save and quit, 'q' to quit without saving")
+            annot.set_state('main')
+            cv.setMouseCallback("View", dummy_handler, (annot,gui) )
+            complete = True
+        
+        gui.cx, gui.cy, gui.cz = annot.traverse(annot.current_parent)
+        window = gui.compose()
             
+        
+        cv.imshow("View", window)
+        
+            
+        a = cv.waitKey(20)
+        
+        if(annot.get_state() == 'confirm' and a == ord(' ')):
+            out = annot.do_confirm(0)
+                    
+                    
+            if(out == 1):
+                    gui.add_message("Select another " + annot.next_link.get_type() + " connected to highlighted " + annot.parent_link.get_type(), "Selection Recorded")
+            else:
+                    gui.add_message("Select a " + annot.next_link.get_type() + " connected to highlighted " + annot.parent_link.get_type(), "Selection Recorded")
+            gui.reset_dialog()
+            
+            gui.flush_canvas()
+                  
+            gui.add_elements(annot.parent_link)
+            
+        if (a == ord('q') and complete):
+            to_save = False
+            break
+        
+        if (a == ord('q') and not complete):
+            gui.add_message("Annotation is incomplete", "'a': Save and add person, 's': Save and Quit, 'x' Quit without saving, 'n': add person withou saving")
+            alert = True
+            
+        elif(a == ord('a')):
+            to_save = True
+            more = True
+            break
+        
+        elif(a == ord('s')):
+            to_save = True
+            more = False
+            break
+        
+        elif(a == ord('x') and alert):
+            to_save = False
+            more = False
+            break
+            
+        elif(a == ord('n') and alert):
+            to_save = False
+            more = True
+            break
+            
+        
+            
+        
+      
+        
+    
+    if(to_save):
+      next_id = All_annotations.append(annot)
+      
+    cv.destroyAllWindows()
+    
+    
+
+    if(not more):
+      break
+    if(to_save):
+        person_id += 1
+          
         
         
